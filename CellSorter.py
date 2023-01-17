@@ -91,14 +91,17 @@ class CellSorter:
         self.display_footprint = True  # flag for whether we will display the ROI footprint
         self.display_lowpass_trace = True  # flag for displaying smoothed ROI activity trace
 
+        self.display_proportion = 0.7   # What proportion of the full display should the GUI take up?
+        self.display_dpi = 96   # Assume a display resolution of 96DPI (used to converting matplotlib sizes)
+
     def backup_iscell(self):
         # Copies existing iscell.npy to a backup file 
         iscell_path = self.s2p_path/'iscell.npy'
         shutil.copy(iscell_path, iscell_path.with_name('iscell_backup.npy'))
 
-    def gen_s2p_fig(self, ix, show_cell = True, show_lowpass = True, cutoff_freq=0.1, framerate=20, order=2):
+    def gen_s2p_fig(self, ix, show_cell = True, show_lowpass = True, figsize = (15,7), canvas = None, cutoff_freq=0.1, framerate=20, order=2):
         # Generates a figure of ROI footprint and track
-        fig, ax = plt.subplots(2,1, figsize=(15,7), gridspec_kw={'height_ratios':[2,1]})
+        fig, ax = plt.subplots(2,1, figsize=figsize, gridspec_kw={'height_ratios':[2,1]})
 
         ax[0].imshow(self.ops['meanImg'], cmap='gray')
         if show_cell:
@@ -124,7 +127,15 @@ class CellSorter:
 
         # Create a GUI window and text
         self.root = tk.Tk()
-        self.root.geometry("1500x800")
+
+        # Get screen size and make window proportional
+        self.screen_width = self.root.winfo_screenwidth()
+        self.screen_height = self.root.winfo_screenheight()
+        self.display_width = int(self.screen_width * self.display_proportion)
+        self.display_height = int(self.screen_height * self.display_proportion)
+        self.plt_figsize = (int(self.display_width/self.display_dpi), int(self.display_height*0.6666/self.display_dpi))
+
+        self.root.geometry(f"{self.display_width}x{self.display_height}+0+0")
         self.root.title("Cell Sorter")
 
         self.text_var_ix = tk.StringVar()   # Create a variable to hold the current ix
@@ -140,7 +151,7 @@ class CellSorter:
         self.text_label_remaining = tk.Label(self.root, textvariable = self.text_var_remaining)
 
         # Create a canvas to display the figure
-        self.canvas = FigureCanvasTkAgg(self.gen_s2p_fig(0), master=self.root)
+        self.canvas = FigureCanvasTkAgg(self.gen_s2p_fig(0, figsize=self.plt_figsize), master=self.root)
         self.canvas.draw()
 
         # Lay out elements in the GUI window
@@ -200,7 +211,7 @@ class CellSorter:
         # Reset and draw display
         self.display_footprint = True
         self.display_lowpass_trace = True
-        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace)
+        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace, figsize=self.plt_figsize)
         self.canvas.draw()
         plt.close(self.canvas.figure)
 
@@ -215,7 +226,7 @@ class CellSorter:
         # Reset and draw display
         self.display_footprint = True
         self.display_lowpass_trace = True
-        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace)
+        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace, figsize=self.plt_figsize)
         self.canvas.draw()
         plt.close(self.canvas.figure)
 
@@ -253,13 +264,13 @@ class CellSorter:
     def _toggle_footprint(self, event=None):
         # Toggles display of the ROI footprint
         self.display_footprint = not self.display_footprint # toggle the value
-        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace)
+        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace, figsize=self.plt_figsize)
         self.canvas.draw()
 
     def _toggle_lowpass_trace(self, event=None):
         # Toggles display of the ROI footprint
         self.display_lowpass_trace = not self.display_lowpass_trace # toggle the value
-        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace)
+        self.canvas.figure = self.gen_s2p_fig(self.ix_position, self.display_footprint, self.display_lowpass_trace, figsize=self.plt_figsize)
         self.canvas.draw()
 
 
@@ -271,7 +282,8 @@ if __name__ == '__main__':
     #args = parser.parse_args()
     #p = Path(args.s2p_path)
 
-    p = Path(r"F:\round_2\684169\ms3\tone_d1\suite2p\plane0")
+    #p = Path(r"F:\round_2\684169\ms3\tone_d1\suite2p\plane0")
+    p = Path(r"C:\reward_project\suite2p frame testing\example")
     sorter = CellSorter(p)
 
     sorter.GUI_loop()
